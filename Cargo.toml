@@ -6,5 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+wasm-bindgen = "0.2.83"
+web-sys = "0.3.60"
+js-sys = "0.3.60"
 # you can check the latest version here: https://crates.io/crates/yew
 yew = "0.19"

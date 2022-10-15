@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Yew App</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+        import {ForceGraph} from './graph_controller.js';
+        let data = {
+            "nodes": [
+                {"id": 1, "group": 1},
+                {"id": 2, "group": 1},
+                {"id": 3, "group": 1},
+                {"id": 4, "group": 1},
+            ],
+            "links": [
+                {"source": 1, "target": 2, "value": 1},
+                {"source": 1, "target": 3, "value": 1},
+                {"source": 1, "target": 4, "value": 1},
+            ]
+        };
+
+        let [chart, restart] = ForceGraph(data, {
+            nodeId: d => d.id,
+            nodeGroup: d => d.group,
+            nodeTitle: d => `${d.id}\n${d.group}`,
+            linkStrokeWidth: l => Math.sqrt(l.value),
+            width: 800,
+            height: 600
+        });
+        /*setInterval(() => {
+            let id = Math.floor(Math.random() * 1000);
+            data.nodes.push({"id": id, "group": 1});
+            data.links.push({"source": data.nodes[0], "target": data.nodes[data.nodes.length - 1], "value": 1});
+            console.log(data);
+            restart(data);
+        }, 1000);*/
+        document.getElementById('app').appendChild(chart);
+    </script>
+    </body>
+</html>

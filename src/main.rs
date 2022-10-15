@@ -1,5 +1,6 @@
 use yew::prelude::*;
-
+mod graph_view;
+use crate::graph_view::GraphView;
 
 enum Msg {
     AddOne,
@@ -42,6 +43,19 @@ impl Component for Model {
     }
 }
 
+
+#[function_component(App)]
+pub fn app() -> Html {
+    html! {
+        <>
+            <h1> {"Hello World!"} </h1>
+            <div>
+                <GraphView />
+            </div>
+        </>
+    }
+}
+
 fn main() {
-    yew::start_app::<Model>();
+    yew::start_app::<App>();
 }

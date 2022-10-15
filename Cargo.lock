@@ -243,6 +243,9 @@ dependencies = [
 name = "rudn-graph-algorithms-yew"
 version = "0.1.0"
 dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
  "yew",
 ]
 
