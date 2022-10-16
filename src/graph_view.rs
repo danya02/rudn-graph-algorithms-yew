@@ -69,64 +69,137 @@ impl Graph {
     }
 }
 
-pub struct GraphView {
-    graph: Graph,
-    graph_html: web_sys::Node,
-    refresh_function: Function,
+
+#[wasm_bindgen()]
+extern "C" {
+    pub type CytoscapeController;
+
+    #[wasm_bindgen(js_name = "cytoscape")]
+    pub fn make_cytoscape_controller(options: &JsValue) -> CytoscapeController;
+
+    type CytoscapeRunnableLayout;
+
+    // Create a layout object from its options
+    #[wasm_bindgen(method)]
+    fn layout(this: &CytoscapeController, options: &JsValue) -> CytoscapeRunnableLayout; // https://js.cytoscape.org/#cy.layout
+
+    #[wasm_bindgen(method)]
+    fn run(this: &CytoscapeRunnableLayout);
+
+    #[wasm_bindgen(method)]
+    fn stop(this: &CytoscapeRunnableLayout);
+
+
+    #[wasm_bindgen(method)]
+    fn mount(this: &CytoscapeController, container: &JsValue);
+
+    #[wasm_bindgen(method)]
+    fn add(this: &CytoscapeController, elements: &JsValue); // https://js.cytoscape.org/#cy.add
 }
 
-#[wasm_bindgen(module="/src/graph_controller.js")]
-extern "C" {
-    #[wasm_bindgen(js_name="ForceGraph")]
-    fn create_force_graph() -> Box<[JsValue]>;  // Expected: first value is an HTML component,
-                                                // second is the refresh function.
+pub struct GraphView {
+    controller: CytoscapeController,
+    prev_layout: Option<CytoscapeRunnableLayout>,
 }
+
 
 impl Component for GraphView {
     type Message = ();
     type Properties = ();
 
     fn create(ctx: &Context<Self>) -> Self {
-        let mut graph = Graph::new();
-        graph.nodes.push(Node { id: 0, name: "A".to_string(), color: "red".to_string() });
-        let force_graph_items = create_force_graph();
-        let mut unboxed_force_graph_items = force_graph_items.to_vec();
-        let refresh = unboxed_force_graph_items.pop().expect("Second value should be a refresh function.");
-        let force_graph = unboxed_force_graph_items.pop().expect("First value should be an HTML component.");
-        let refresh: Function = refresh.dyn_into().expect("Second value should be a refresh function.");
-        Self { 
-            graph,
-            graph_html: force_graph.into(),
-            refresh_function: refresh,
+        log::info!("Create cytoscape controller");
+
+        let options = js_sys::Object::new();
+
+        let style = js_sys::JSON::parse(r##"
+            [
+                {
+                    "selector": "node",
+                    "style": {
+                        "background-color": "#666",
+                        "label": "data(id)"
+                    }
+                },
+            
+                {
+                    "selector": "edge",
+                    "style": {
+                        "width": 3,
+                        "line-color": "#ccc",
+                        "target-arrow-color": "#ccc",
+                        "target-arrow-shape": "triangle",
+                        "curve-style": "bezier"
+                    }
+                }
+            ]
+        "##).unwrap();
+        js_sys::Reflect::set(&options, &JsValue::from("style"), &style).unwrap();
+        
+
+        let controller = make_cytoscape_controller(&options);
+
+        controller.add(
+            &js_sys::JSON::parse(r#"
+            [
+                {
+                    "data": { "id": "a" }
+                },
+                { 
+                    "data": { "id": "b" }
+                },
+                { 
+                    "data": { "id": "ab", "source": "a", "target": "b" }
+                }
+            ]
+            "#).unwrap()
+        );
+
+
+        Self {
+            controller: controller,
+            prev_layout: None,
         }
     }
 
-    fn update(&mut self, _ctx: &Context<Self>, _msg: Self::Message) -> bool {
-        let new_id = self.graph.nodes.len();
-        self.graph.nodes.push(Node { id: new_id, name: "A".to_string(), color: "red".to_string() });
-        self.graph.links.push(
-            Link {
-                from: self.graph.nodes[0].clone(),
-                to: self.graph.nodes[new_id].clone(),
-                
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+        log::info!("Cytoscape controller received message: {:?}", msg);
+        if let Some(layout) = &self.prev_layout {
+            layout.stop();
+        }
+        self.controller.layout(
+            &js_sys::JSON::parse(r#"
+            {
+                "name": "cose",
+                "animate": true,
+                "randomize": true,
+                "maxSimulationTime": 1500,
+                "animationDuration": 1000,
+                "fit": true
             }
-        );
-        self.refresh_function.call1(&JsValue::NULL, &self.graph.to_jsvalue()).expect("Refresh function should be callable.");
-    false
+            "#).unwrap()
+        ).run();
+
+        false
     }
 
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let link = ctx.link();
-        let graph_component = VNode::VRef(self.graph_html.clone());
+        log::info!("Cytoscape controller is viewed (should only happen once)");
 
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let container = document.create_element("div").unwrap();
+        container.set_attribute("id", "cy").unwrap();
+        self.controller.mount(&container.clone());
+        let vref = VNode::VRef(container.into());
         html!{
             <div>
-                { graph_component }
-                <button onclick={link.callback(|_| ())}>{ "+1" }</button>
-
+                {vref}
+                <button onclick={ ctx.link().callback(|_| ()) }>{"Run layout"}</button>
             </div>
         }
+
     }
     
 }

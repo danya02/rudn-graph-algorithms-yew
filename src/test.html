@@ -3,41 +3,67 @@
   <head>
     <meta charset="utf-8" />
     <title>Yew App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.23.0/cytoscape.min.js" integrity="sha512-gEWKnYYa1/1c3jOuT9PR7NxiVI1bwn02DeJGsl+lMVQ1fWMNvtjkjxIApTdbJ/wcDjQmbf+McWahXwipdC9bGA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module">
-        import {ForceGraph} from './graph_controller.js';
-        let data = {
-            "nodes": [
-                {"id": 1, "group": 1},
-                {"id": 2, "group": 1},
-                {"id": 3, "group": 1},
-                {"id": 4, "group": 1},
-            ],
-            "links": [
-                {"source": 1, "target": 2, "value": 1},
-                {"source": 1, "target": 3, "value": 1},
-                {"source": 1, "target": 4, "value": 1},
-            ]
-        };
+    <div id="cy" class="main" style="width:1000px; height:1000px; display:block;">
+    </div>
+    <script>
 
-        let [chart, restart] = ForceGraph(data, {
-            nodeId: d => d.id,
-            nodeGroup: d => d.group,
-            nodeTitle: d => `${d.id}\n${d.group}`,
-            linkStrokeWidth: l => Math.sqrt(l.value),
-            width: 800,
-            height: 600
+        var cy = cytoscape({
+            container: document.getElementById('cy'), // container to render in
+            style: [ // the stylesheet for the graph
+                {
+                selector: 'node',
+                style: {
+                    'background-color': '#666',
+                    'label': 'data(id)'
+                }
+                },
+            
+                {
+                selector: 'edge',
+                style: {
+                    'width': 3,
+                    'line-color': '#ccc',
+                    'target-arrow-color': '#ccc',
+                    'target-arrow-shape': 'triangle',
+                    'curve-style': 'bezier'
+                }
+                }
+            ],
+            layout: {
+                name: 'cose',
+                rows: 1
+            },
         });
+
         /*setInterval(() => {
-            let id = Math.floor(Math.random() * 1000);
-            data.nodes.push({"id": id, "group": 1});
-            data.links.push({"source": data.nodes[0], "target": data.nodes[data.nodes.length - 1], "value": 1});
-            console.log(data);
-            restart(data);
+            let x = Math.floor(Math.random() * 100);
+            let y = Math.floor(Math.random() * 100);
+            cy.add(
+                [
+                    { // node a
+                        data: { id: x }
+                    },
+                    { // node b
+                        data: { id: y }
+                    },
+                    { // edge ab
+                        data: { id: x+'-'+y, source: x, target: y }
+                    }
+                ]
+            );
+            cy.layout(
+                {
+                    name: 'cose',
+                    rows: 1
+                }
+            ).run();
+
         }, 1000);*/
-        document.getElementById('app').appendChild(chart);
+
+        
     </script>
     </body>
 </html>

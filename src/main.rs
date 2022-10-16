@@ -2,6 +2,8 @@ use yew::prelude::*;
 mod graph_view;
 use crate::graph_view::GraphView;
 
+use wasm_bindgen::prelude::*;
+
 enum Msg {
     AddOne,
 }
@@ -57,5 +59,6 @@ pub fn app() -> Html {
 }
 
 fn main() {
+    wasm_logger::init(wasm_logger::Config::default());
     yew::start_app::<App>();
 }
