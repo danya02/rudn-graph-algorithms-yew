@@ -1,73 +1,9 @@
 use yew::prelude::*;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use js_sys::Function;
 use yew::virtual_dom::VNode;
-
-#[derive(Eq, PartialEq, Clone)]
-pub struct Node {
-    id: usize,
-    name: String,
-    color: String,
-}
-
-impl Node {
-    fn to_jsvalue(&self) -> JsValue {
-        let obj = js_sys::Object::new();
-        let id = JsValue::from(self.id);
-        let name = JsValue::from(self.name.clone());
-        js_sys::Reflect::set(&obj, &JsValue::from("id"), &id).unwrap();
-        js_sys::Reflect::set(&obj, &JsValue::from("name"), &name).unwrap();
-        js_sys::Reflect::set(&obj, &JsValue::from("color"), &JsValue::from(self.color.clone())).unwrap();
-        obj.into()
-    }
-}
-
-#[derive(Eq, PartialEq, Clone)]
-pub struct Link {
-    from: Node,
-    to: Node,
-}
-
-impl Link {
-    fn to_jsvalue(&self) -> JsValue {
-        let obj = js_sys::Object::new();
-        let from = self.from.to_jsvalue();
-        let to = self.to.to_jsvalue();
-        js_sys::Reflect::set(&obj, &JsValue::from("source"), &from).unwrap();
-        js_sys::Reflect::set(&obj, &JsValue::from("target"), &to).unwrap();
-        obj.into()
-    }
-}
-
-pub struct Graph {
-    pub nodes: Vec<Node>,
-    pub links: Vec<Link>,
-}
-
-impl Graph {
-    pub fn new() -> Self {
-        Self {
-            nodes: vec![],
-            links: vec![],
-        }
-    }
-
-    pub fn to_jsvalue(&self) -> JsValue {
-        let obj = js_sys::Object::new();
-        let nodes = js_sys::Array::new();
-        let links = js_sys::Array::new();
-        for node in &self.nodes {
-            nodes.push(&node.to_jsvalue());
-        }
-        for link in &self.links {
-            links.push(&link.to_jsvalue());
-        }
-        js_sys::Reflect::set(&obj, &JsValue::from("nodes"), &nodes).unwrap();
-        js_sys::Reflect::set(&obj, &JsValue::from("links"), &links).unwrap();
-        JsValue::from(obj)
-    }
-}
+use crate::graph_settings_bus::EventBus;
+use yew_agent::{Bridge, Bridged};
+use crate::graph_settings::GraphSettingsMessage;
 
 
 #[wasm_bindgen()]
@@ -95,16 +31,52 @@ extern "C" {
 
     #[wasm_bindgen(method)]
     fn add(this: &CytoscapeController, elements: &JsValue); // https://js.cytoscape.org/#cy.add
+    
+    #[wasm_bindgen(method, js_name = "selectionType")]
+    fn get_selection_type(this: &CytoscapeController) -> String; // https://js.cytoscape.org/#cy.selectionType
+
+    #[wasm_bindgen(method, js_name = "selectionType")]
+    fn set_selection_type(this: &CytoscapeController, selection_type: &str); // https://js.cytoscape.org/#cy.selectionType
+
+    type CytoscapeElements;
+
+    #[wasm_bindgen(method, js_name = "$")]
+    fn filter_js(this: &CytoscapeController, selector: &str) -> JsValue; // https://js.cytoscape.org/#cy.$
+
+    #[wasm_bindgen(method, js_name = "$")]
+    fn filter(this: &CytoscapeController, selector: &str) -> CytoscapeElements; // https://js.cytoscape.org/#cy.$
+
+    #[wasm_bindgen(method, js_name = "selectify")]
+    fn selectify(this: &CytoscapeElements); // https://js.cytoscape.org/#eles.selectify
+
+    #[wasm_bindgen(method, js_name = "unselectify")]
+    fn unselectify(this: &CytoscapeElements); // https://js.cytoscape.org/#eles.unselectify
+
+    #[wasm_bindgen(method, js_name = "select")]
+    fn select(this: &CytoscapeElements); // https://js.cytoscape.org/#eles.select
+
+    #[wasm_bindgen(method, js_name = "unselect")]
+    fn unselect(this: &CytoscapeElements); // https://js.cytoscape.org/#eles.unselect
+
+
+
 }
 
 pub struct GraphView {
     controller: CytoscapeController,
     prev_layout: Option<CytoscapeRunnableLayout>,
+    _producer: Box<dyn Bridge<EventBus>>,
+}
+
+#[derive(Debug)]
+pub enum Msg {
+    /// Request to relayout the graph
+    SettingMessage(GraphSettingsMessage),
 }
 
 
 impl Component for GraphView {
-    type Message = ();
+    type Message = Msg;
     type Properties = ();
 
     fn create(ctx: &Context<Self>) -> Self {
@@ -112,29 +84,8 @@ impl Component for GraphView {
 
         let options = js_sys::Object::new();
 
-        let style = js_sys::JSON::parse(r##"
-            [
-                {
-                    "selector": "node",
-                    "style": {
-                        "background-color": "#666",
-                        "label": "data(id)"
-                    }
-                },
-            
-                {
-                    "selector": "edge",
-                    "style": {
-                        "width": 3,
-                        "line-color": "#ccc",
-                        "target-arrow-color": "#ccc",
-                        "target-arrow-shape": "triangle",
-                        "curve-style": "bezier"
-                    }
-                }
-            ]
-        "##).unwrap();
-        js_sys::Reflect::set(&options, &JsValue::from("style"), &style).unwrap();
+        let style = js_sys::JSON::parse(include_str!("style.json")).unwrap();
+        js_sys::Reflect::set(&options, &JsValue::from("style"), &JsValue::from(style)).unwrap();
         
 
         let controller = make_cytoscape_controller(&options);
@@ -143,10 +94,10 @@ impl Component for GraphView {
             &js_sys::JSON::parse(r#"
             [
                 {
-                    "data": { "id": "a" }
+                    "data": { "id": "a", "selectable": true }
                 },
                 { 
-                    "data": { "id": "b" }
+                    "data": { "id": "b", "selectable": true }
                 },
                 { 
                     "data": { "id": "ab", "source": "a", "target": "b" }
@@ -156,35 +107,33 @@ impl Component for GraphView {
         );
 
 
+        controller.set_selection_type("additive");
+
+        controller.filter("node").selectify();
+        //controller.filter("node").select();
+        
+
+
         Self {
             controller: controller,
             prev_layout: None,
+            _producer: crate::graph_settings_bus::EventBus::bridge(ctx.link().callback(|setting_msg|{
+                log::info!("Received event: {:?}", setting_msg);
+                Msg::SettingMessage(setting_msg)
+        })),
         }
     }
 
+
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         log::info!("Cytoscape controller received message: {:?}", msg);
-        if let Some(layout) = &self.prev_layout {
-            layout.stop();
-        }
-        self.controller.layout(
-            &js_sys::JSON::parse(r#"
-            {
-                "name": "cose",
-                "animate": true,
-                "randomize": true,
-                "maxSimulationTime": 1500,
-                "animationDuration": 1000,
-                "fit": true
-            }
-            "#).unwrap()
-        ).run();
+        self.randomize_layout();
 
         false
     }
 
 
-    fn view(&self, ctx: &Context<Self>) -> Html {
+    fn view(&self, _ctx: &Context<Self>) -> Html {
         log::info!("Cytoscape controller is viewed (should only happen once)");
 
         let window = web_sys::window().unwrap();
@@ -196,10 +145,33 @@ impl Component for GraphView {
         html!{
             <div>
                 {vref}
-                <button onclick={ ctx.link().callback(|_| ()) }>{"Run layout"}</button>
             </div>
         }
 
     }
     
+}
+
+
+impl GraphView {
+    fn randomize_layout(&mut self) {
+        if let Some(layout) = &self.prev_layout {
+            layout.stop();
+        }
+        let new_layout = self.controller.layout(
+            &js_sys::JSON::parse(r#"
+            {
+                "name": "cose",
+                "animate": true,
+                "randomize": false,
+                "maxSimulationTime": 1500,
+                "animationDuration": 1000,
+                "fit": true,
+                "animationThreshold": 10
+            }
+            "#).unwrap()
+        );
+        new_layout.run();
+        self.prev_layout = Some(new_layout);
+    }
 }

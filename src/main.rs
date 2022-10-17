@@ -1,8 +1,8 @@
 use yew::prelude::*;
 mod graph_view;
+mod graph_settings;
+mod graph_settings_bus;
 use crate::graph_view::GraphView;
-
-use wasm_bindgen::prelude::*;
 
 enum Msg {
     AddOne,
@@ -53,6 +53,7 @@ pub fn app() -> Html {
             <h1> {"Hello World!"} </h1>
             <div>
                 <GraphView />
+                <graph_settings::Producer />
             </div>
         </>
     }
@@ -61,4 +62,5 @@ pub fn app() -> Html {
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
     yew::start_app::<App>();
+    
 }
