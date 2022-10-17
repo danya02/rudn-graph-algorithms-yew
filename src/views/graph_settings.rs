@@ -5,14 +5,15 @@ use yew_agent::{Dispatched, Dispatcher};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum GraphSettingsMessage {
-    Clicked,
+    /// Request to rerun the layout on the current graph
+    Relayout,
 }
 
-pub struct Producer {
+pub struct GraphSettingsModule {
     event_bus: Dispatcher<EventBus>,
 }
 
-impl Component for Producer {
+impl Component for GraphSettingsModule {
     type Message = GraphSettingsMessage;
     type Properties = ();
 
@@ -23,14 +24,13 @@ impl Component for Producer {
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-        self.event_bus
-        .send(Request::EventBusMsg(msg));
+        self.event_bus.send(Request::EventBusMsg(msg));
         false
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         html! {
-            <button onclick={ctx.link().callback(|_| GraphSettingsMessage::Clicked)}>
+            <button class={"btn btn-primary"} onclick={ctx.link().callback(|_| GraphSettingsMessage::Relayout)}>
                 { "Do relayout" }
             </button>
         }

@@ -1,63 +1,59 @@
 use yew::prelude::*;
-mod graph_view;
-mod graph_settings;
+use yew_router::prelude::*;
+mod views;
 mod graph_settings_bus;
-use crate::graph_view::GraphView;
+use crate::views::graph_view::GraphView;
+use crate::views::navbar::Navbar;
+use crate::views::graph_settings::GraphSettingsModule;
+use crate::views::not_found::NotFoundView;
 
-enum Msg {
-    AddOne,
+#[derive(Clone, Routable, PartialEq)]
+enum Route {
+    #[at("/")]
+    Home,
+    #[not_found]
+    #[at("/404")]
+    NotFound,
 }
 
-struct Model {
-    value: i64,
-}
-
-impl Component for Model {
-    type Message = Msg;
-    type Properties = ();
-
-    fn create(_ctx: &Context<Self>) -> Self {
-        Self {
-            value: 0,
-        }
-    }
-
-    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-        match msg {
-            Msg::AddOne => {
-                self.value += 1;
-                // the value has changed so we need to
-                // re-render for it to appear on the page
-                true
-            }
-        }
-    }
-
-    fn view(&self, ctx: &Context<Self>) -> Html {
-        // This gives us a component's "`Scope`" which allows us to send messages, etc to the component.
-        let link = ctx.link();
-        html! {
-            <div>
-                <button onclick={link.callback(|_| Msg::AddOne)}>{ "+1" }</button>
-                <p>{ self.value }</p>
-            </div>
-        }
-    }
-}
-
-
-#[function_component(App)]
-pub fn app() -> Html {
+#[function_component(Home)]
+fn home() -> Html {
     html! {
         <>
-            <h1> {"Hello World!"} </h1>
-            <div>
-                <GraphView />
-                <graph_settings::Producer />
+            <Navbar/>
+
+            <div class={"container"}>
+
+                <h1> {"Hello World!"} </h1>
+                <div>
+                    <GraphView class="mb-3" />
+                    <GraphSettingsModule />
+                </div>
+
             </div>
         </>
     }
 }
+
+fn switch(routes: &Route) -> Html {
+    match routes {
+        Route::Home => html!{
+            <Home />
+        },
+        Route::NotFound => html! { 
+            <NotFoundView />
+        },
+    }
+}
+
+#[function_component(App)]
+pub fn app() -> Html {
+        html! {
+            <BrowserRouter>
+                <Switch<Route> render={Switch::render(switch)} />
+            </BrowserRouter>
+        }
+    }
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());

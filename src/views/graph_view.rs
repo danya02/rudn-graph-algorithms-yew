@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 use yew::virtual_dom::VNode;
 use crate::graph_settings_bus::EventBus;
 use yew_agent::{Bridge, Bridged};
-use crate::graph_settings::GraphSettingsMessage;
+use crate::views::graph_settings::GraphSettingsMessage;
 
 
 #[wasm_bindgen()]
@@ -74,10 +74,14 @@ pub enum Msg {
     SettingMessage(GraphSettingsMessage),
 }
 
+#[derive(Debug, Clone, Properties, PartialEq)]
+pub struct Properties {
+    pub class: String,
+}
 
 impl Component for GraphView {
     type Message = Msg;
-    type Properties = ();
+    type Properties = Properties;
 
     fn create(ctx: &Context<Self>) -> Self {
         log::info!("Create cytoscape controller");
@@ -127,9 +131,13 @@ impl Component for GraphView {
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         log::info!("Cytoscape controller received message: {:?}", msg);
-        self.randomize_layout();
 
-        false
+        match msg {
+            Msg::SettingMessage(setting_msg) => {
+                self.apply_settings_message(setting_msg);
+                false
+            }
+        }
     }
 
 
@@ -143,7 +151,7 @@ impl Component for GraphView {
         self.controller.mount(&container.clone());
         let vref = VNode::VRef(container.into());
         html!{
-            <div>
+            <div class={_ctx.props().class.clone()}>
                 {vref}
             </div>
         }
@@ -154,6 +162,16 @@ impl Component for GraphView {
 
 
 impl GraphView {
+
+    fn apply_settings_message(&mut self, setting_msg: GraphSettingsMessage) {
+        match setting_msg {
+            GraphSettingsMessage::Relayout => {
+                self.randomize_layout();
+            }
+        }
+    }
+
+
     fn randomize_layout(&mut self) {
         if let Some(layout) = &self.prev_layout {
             layout.stop();

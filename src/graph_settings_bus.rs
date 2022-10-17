@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use yew_agent::{Agent, AgentLink, Context, HandlerId};
-use crate::graph_settings::GraphSettingsMessage;
+use crate::views::graph_settings::GraphSettingsMessage;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Request {
