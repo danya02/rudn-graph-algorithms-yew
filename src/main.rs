@@ -6,6 +6,7 @@ use crate::views::graph_view::GraphView;
 use crate::views::navbar::Navbar;
 use crate::views::graph_settings::GraphSettingsModule;
 use crate::views::not_found::NotFoundView;
+use crate::views::column_view::Columns;
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
@@ -25,10 +26,10 @@ fn home() -> Html {
             <div class={"container"}>
 
                 <h1> {"Hello World!"} </h1>
-                <div>
+                <Columns>
                     <GraphView class="mb-3" />
                     <GraphSettingsModule />
-                </div>
+                </Columns>
 
             </div>
         </>

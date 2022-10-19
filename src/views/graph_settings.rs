@@ -7,6 +7,8 @@ use yew_agent::{Dispatched, Dispatcher};
 pub enum GraphSettingsMessage {
     /// Request to rerun the layout on the current graph
     Relayout,
+    /// Request to add a node to the graph
+    AddNode,
 }
 
 pub struct GraphSettingsModule {
@@ -30,9 +32,14 @@ impl Component for GraphSettingsModule {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         html! {
-            <button class={"btn btn-primary"} onclick={ctx.link().callback(|_| GraphSettingsMessage::Relayout)}>
-                { "Do relayout" }
-            </button>
+            <>
+                <button class={"btn btn-primary"} onclick={ctx.link().callback(|_| GraphSettingsMessage::Relayout)}>
+                    { "Do relayout" }
+                </button>
+                <button class={"btn btn-primary"} onclick={ctx.link().callback(|_| GraphSettingsMessage::AddNode)}>
+                    { "Add node" }
+                </button>
+            </>
         }
     }
 }
